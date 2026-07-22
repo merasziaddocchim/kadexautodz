@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx --env-file-if-exists=.env.local src/db/migrate.ts",
+    "db:seed": "tsx --env-file-if-exists=.env.local src/db/seed.ts",
+    "create-user": "tsx --env-file-if-exists=.env.local scripts/create-user.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
