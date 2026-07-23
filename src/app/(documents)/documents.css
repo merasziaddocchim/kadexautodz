@@ -1,0 +1,60 @@
+/* Print-optimized A4 document styling. Loaded only on document routes. */
+
+.doc-backdrop {
+  background: #f3f4f6;
+  min-height: 100vh;
+  padding: 24px 12px;
+}
+
+.doc-sheet {
+  background: #fff;
+  color: #111827;
+  width: 210mm;
+  max-width: 100%;
+  min-height: 297mm;
+  margin: 0 auto;
+  padding: 18mm;
+  box-sizing: border-box;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.15);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.doc-sheet h1 {
+  font-size: 18px;
+}
+
+/* Keep table rows and signature blocks from splitting across pages. */
+.doc-sheet tr,
+.avoid-break {
+  break-inside: avoid;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 16mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+  .doc-backdrop {
+    background: #fff;
+    padding: 0;
+    min-height: 0;
+  }
+  .doc-sheet {
+    width: auto;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+  .no-print {
+    display: none !important;
+  }
+  thead {
+    display: table-header-group;
+  }
+}

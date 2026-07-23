@@ -95,16 +95,24 @@ export default function PaymentsTable({ rows }: { rows: PaymentRow[] }) {
                 <td className={tdCls}>{METHOD_LABELS[r.method]}</td>
                 <td className={`${tdCls} text-gray-500`}>{r.notes || "—"}</td>
                 <td className={`${tdCls} text-right`}>
-                  <ConfirmButton
-                    label="Delete"
-                    title={`Delete ${r.code}?`}
-                    message={`This removes the ${formatDZD(
-                      r.amount
-                    )} payment on ${r.orderCode}. The order balance goes back up.`}
-                    confirmLabel="Delete"
-                    onConfirm={() => deletePayment(r.id, r.code)}
-                    className="text-sm text-red-600 hover:underline"
-                  />
+                  <div className="flex items-center justify-end gap-3">
+                    <Link
+                      href={`/payments/${r.id}/receipt`}
+                      className="text-blue-700 hover:underline"
+                    >
+                      Receipt
+                    </Link>
+                    <ConfirmButton
+                      label="Delete"
+                      title={`Delete ${r.code}?`}
+                      message={`This removes the ${formatDZD(
+                        r.amount
+                      )} payment on ${r.orderCode}. The order balance goes back up.`}
+                      confirmLabel="Delete"
+                      onConfirm={() => deletePayment(r.id, r.code)}
+                      className="text-sm text-red-600 hover:underline"
+                    />
+                  </div>
                 </td>
               </tr>
             ))}

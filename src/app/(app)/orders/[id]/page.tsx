@@ -5,6 +5,7 @@ import { formatDate, formatDZD } from "@/lib/format";
 import { METHOD_LABELS, OrderStatus, PaymentMethod } from "@/lib/types";
 import { StatusBadge } from "@/components/badges";
 import OrderActions from "@/components/OrderActions";
+import { issueInvoice } from "@/lib/documentActions";
 import { btnSecondary, cardCls, tdCls, thCls } from "@/components/ui";
 
 export const metadata = { title: "Order — Kadex Auto DZ" };
@@ -19,6 +20,7 @@ interface OrderDetail {
   discount_dzd: number;
   extras_dzd: number;
   created_at: string;
+  invoice_number: string | null;
   client: { code: string; name: string; phone: string | null; city: string | null };
   car: {
     code: string;
@@ -48,7 +50,7 @@ export default async function OrderDetailPage({
   const { data, error } = await supabase
     .from("orders")
     .select(
-      `id, code, order_date, status, tracking_no, notes, discount_dzd, extras_dzd, created_at,
+      `id, code, order_date, status, tracking_no, notes, discount_dzd, extras_dzd, created_at, invoice_number,
        client:clients(code, name, phone, city),
        car:cars(code, year, list_price_dzd, brand:brands(name), model:models(name), color:colors(name)),
        payments(id, code, paid_on, amount_dzd, method, notes)`
@@ -71,7 +73,15 @@ export default async function OrderDetailPage({
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-xl font-semibold">{order.code}</h1>
         <StatusBadge status={order.status} />
-        <div className="ml-auto flex flex-wrap gap-2">
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <form action={issueInvoice}>
+            <input type="hidden" name="orderId" value={order.id} />
+            <button type="submit" className={btnSecondary}>
+              {order.invoice_number
+                ? `Invoice ${order.invoice_number}`
+                : "Issue invoice / Print"}
+            </button>
+          </form>
           <Link href={`/orders/${order.id}/edit`} className={btnSecondary}>
             Edit
           </Link>
@@ -161,6 +171,7 @@ export default async function OrderDetailPage({
                 <th className={`${thCls} text-right`}>Amount</th>
                 <th className={thCls}>Method</th>
                 <th className={thCls}>Notes</th>
+                <th className={thCls}></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -173,11 +184,19 @@ export default async function OrderDetailPage({
                   </td>
                   <td className={tdCls}>{METHOD_LABELS[p.method]}</td>
                   <td className={`${tdCls} text-gray-500`}>{p.notes || "—"}</td>
+                  <td className={`${tdCls} text-right`}>
+                    <Link
+                      href={`/payments/${p.id}/receipt`}
+                      className="text-blue-700 hover:underline"
+                    >
+                      Receipt
+                    </Link>
+                  </td>
                 </tr>
               ))}
               {payments.length === 0 && (
                 <tr>
-                  <td className={`${tdCls} text-gray-400`} colSpan={5}>
+                  <td className={`${tdCls} text-gray-400`} colSpan={6}>
                     No payments yet.
                   </td>
                 </tr>
