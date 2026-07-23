@@ -10,6 +10,7 @@ const LINKS = [
   { href: "/inventory", label: "Inventory" },
   { href: "/clients", label: "Clients" },
   { href: "/payments", label: "Payments" },
+  { href: "/settings", label: "Settings" },
 ];
 
 export default function NavBar({ email }: { email: string }) {

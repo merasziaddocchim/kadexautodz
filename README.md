@@ -28,6 +28,66 @@ Dates display as DD/MM/YYYY. UI is in English.
   warning.
 - **No double-sell** — a car can have only one active (non-cancelled) order,
   enforced by a partial unique index in the database.
+- **Documents** — printable invoice, payment receipt, and vehicle sale
+  contract, in French (see below).
+- **Settings** — `/settings` edits the company identity (RC/NIF/NIS/ART,
+  RIB, capital…) used on all documents, so the owner never touches the
+  database.
+
+## Documents (invoice, receipt, contract)
+
+Documents are printable, print-optimized A4 pages in **French** (the app UI
+stays English). Open the document and use the browser's **Print → Save as
+PDF** — there is no PDF library or headless browser involved. When printed,
+the navigation and buttons are hidden and the page prints to clean A4
+margins.
+
+Routes (all staff-only):
+
+- `/orders/[id]/invoice` — **Facture**. Company header, client (with ID card
+  when present), vehicle line, totals, the total amount spelled out in French
+  words, and the payment summary (total / versé / reste à payer).
+- `/payments/[id]/receipt` — **Reçu de paiement**. Amount in figures and
+  words, method, and the order balance remaining after that payment.
+- `/orders/[id]/contract` — **Contrat de vente de véhicule**. Numbered
+  articles (objet, prix, modalités de paiement, livraison, transfert de
+  propriété, garantie, litiges) with signature blocks.
+
+Open the invoice/contract from the order page ("Issue invoice / Print",
+"Issue contract / Print"); open a receipt from the payments table or the
+order's payment list.
+
+### Document numbering
+
+Invoice and contract numbers are assigned **when the document is first
+issued**, not at order creation, and are **sequential per calendar year**:
+
+- Invoices: `FAC-2026-0001`, `FAC-2026-0002`, …
+- Contracts: `CTR-2026-0001`, …
+
+Assignment runs through a Postgres function (`issue_document_number`) called
+from a server action. It takes a transaction-scoped advisory lock on
+`(prefix, year)` and computes `max + 1`, so two documents issued at the same
+moment can never collide; the `invoice_number` / `contract_number` unique
+constraints are a final backstop. The function is **idempotent** — issuing an
+already-numbered document returns the existing number and never renumbers.
+
+### Contract blockers
+
+A contract cannot be issued (a clear French message is shown instead, and no
+number is assigned) when:
+
+- the client has **no ID card number**, or
+- the **company settings** still contain the `À COMPLÉTER` placeholder values.
+
+Fill the client's legal fields (Clients → edit → *Legal documents*) and the
+company identity (`/settings`) first.
+
+> **Not legal advice.** The contract template is a convenience document for a
+> prototype. Its warranty and jurisdiction articles are left as `À DÉFINIR`
+> placeholders, and every page prints the reminder to have the document
+> reviewed by a legal professional before signing. Have all generated
+> documents checked by qualified counsel before use.
 
 ## Environment variables
 

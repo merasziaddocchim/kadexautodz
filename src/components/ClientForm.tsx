@@ -19,6 +19,12 @@ export interface ClientFormInitial {
   email: string;
   city: string;
   notes: string;
+  address: string;
+  id_card_number: string;
+  id_card_issued_at: string;
+  id_card_issued_by: string;
+  birth_date: string;
+  birth_place: string;
 }
 
 export default function ClientForm({
@@ -37,6 +43,18 @@ export default function ClientForm({
   const [email, setEmail] = useState(initial?.email ?? "");
   const [city, setCity] = useState(initial?.city ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [address, setAddress] = useState(initial?.address ?? "");
+  const [idCardNumber, setIdCardNumber] = useState(
+    initial?.id_card_number ?? ""
+  );
+  const [idCardIssuedAt, setIdCardIssuedAt] = useState(
+    initial?.id_card_issued_at ?? ""
+  );
+  const [idCardIssuedBy, setIdCardIssuedBy] = useState(
+    initial?.id_card_issued_by ?? ""
+  );
+  const [birthDate, setBirthDate] = useState(initial?.birth_date ?? "");
+  const [birthPlace, setBirthPlace] = useState(initial?.birth_place ?? "");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -55,6 +73,12 @@ export default function ClientForm({
       email: email.trim() || null,
       city: city.trim() || null,
       notes: notes.trim() || null,
+      address: address.trim() || null,
+      id_card_number: idCardNumber.trim() || null,
+      id_card_issued_at: idCardIssuedAt || null,
+      id_card_issued_by: idCardIssuedBy.trim() || null,
+      birth_date: birthDate || null,
+      birth_place: birthPlace.trim() || null,
     };
     const { error } =
       mode === "create"
@@ -150,6 +174,86 @@ export default function ClientForm({
           />
         </div>
       </div>
+
+      <fieldset className="mt-5 border-t border-gray-200 pt-4">
+        <legend className="mb-1 text-sm font-semibold text-gray-700">
+          Legal documents
+        </legend>
+        <p className="mb-3 text-xs text-gray-500">
+          Optional — used on the sale contract. An ID card number is required
+          before a contract can be issued.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className={labelCls} htmlFor="address">
+              Address
+            </label>
+            <input
+              id="address"
+              className={inputCls}
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className={labelCls} htmlFor="id_card_number">
+              ID card number
+            </label>
+            <input
+              id="id_card_number"
+              className={inputCls}
+              value={idCardNumber}
+              onChange={(e) => setIdCardNumber(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className={labelCls} htmlFor="id_card_issued_at">
+              ID card issued on
+            </label>
+            <input
+              id="id_card_issued_at"
+              type="date"
+              className={inputCls}
+              value={idCardIssuedAt}
+              onChange={(e) => setIdCardIssuedAt(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className={labelCls} htmlFor="id_card_issued_by">
+              ID card issued by
+            </label>
+            <input
+              id="id_card_issued_by"
+              className={inputCls}
+              value={idCardIssuedBy}
+              onChange={(e) => setIdCardIssuedBy(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className={labelCls} htmlFor="birth_date">
+              Date of birth
+            </label>
+            <input
+              id="birth_date"
+              type="date"
+              className={inputCls}
+              value={birthDate}
+              onChange={(e) => setBirthDate(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className={labelCls} htmlFor="birth_place">
+              Place of birth
+            </label>
+            <input
+              id="birth_place"
+              className={inputCls}
+              value={birthPlace}
+              onChange={(e) => setBirthPlace(e.target.value)}
+            />
+          </div>
+        </div>
+      </fieldset>
 
       {error && <p className={`${errorCls} mt-4`}>{error}</p>}
 
