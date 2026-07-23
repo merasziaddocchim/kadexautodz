@@ -5,7 +5,7 @@ import { formatDate, formatDZD } from "@/lib/format";
 import { METHOD_LABELS, OrderStatus, PaymentMethod } from "@/lib/types";
 import { StatusBadge } from "@/components/badges";
 import OrderActions from "@/components/OrderActions";
-import { issueInvoice } from "@/lib/documentActions";
+import { issueContract, issueInvoice } from "@/lib/documentActions";
 import { btnSecondary, cardCls, tdCls, thCls } from "@/components/ui";
 
 export const metadata = { title: "Order — Kadex Auto DZ" };
@@ -21,6 +21,7 @@ interface OrderDetail {
   extras_dzd: number;
   created_at: string;
   invoice_number: string | null;
+  contract_number: string | null;
   client: { code: string; name: string; phone: string | null; city: string | null };
   car: {
     code: string;
@@ -50,7 +51,7 @@ export default async function OrderDetailPage({
   const { data, error } = await supabase
     .from("orders")
     .select(
-      `id, code, order_date, status, tracking_no, notes, discount_dzd, extras_dzd, created_at, invoice_number,
+      `id, code, order_date, status, tracking_no, notes, discount_dzd, extras_dzd, created_at, invoice_number, contract_number,
        client:clients(code, name, phone, city),
        car:cars(code, year, list_price_dzd, brand:brands(name), model:models(name), color:colors(name)),
        payments(id, code, paid_on, amount_dzd, method, notes)`
@@ -80,6 +81,14 @@ export default async function OrderDetailPage({
               {order.invoice_number
                 ? `Invoice ${order.invoice_number}`
                 : "Issue invoice / Print"}
+            </button>
+          </form>
+          <form action={issueContract}>
+            <input type="hidden" name="orderId" value={order.id} />
+            <button type="submit" className={btnSecondary}>
+              {order.contract_number
+                ? `Contract ${order.contract_number}`
+                : "Issue contract / Print"}
             </button>
           </form>
           <Link href={`/orders/${order.id}/edit`} className={btnSecondary}>

@@ -30,6 +30,17 @@
   break-inside: avoid;
 }
 
+/* Discreet contract footer. On screen it sits once at the end of the sheet;
+   when printing it is fixed to the bottom of every page. */
+.contract-footer {
+  margin-top: 24px;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 8px;
+  text-align: center;
+  font-size: 10px;
+  color: #6b7280;
+}
+
 @media print {
   @page {
     size: A4;
@@ -56,5 +67,14 @@
   }
   thead {
     display: table-header-group;
+  }
+  .contract-footer {
+    position: fixed;
+    bottom: 6mm;
+    left: 0;
+    right: 0;
+    margin: 0;
+    border: 0;
+    padding: 0;
   }
 }
