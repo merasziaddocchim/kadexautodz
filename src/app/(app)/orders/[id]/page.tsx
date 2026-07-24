@@ -3,8 +3,14 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate, formatDZD } from "@/lib/format";
 import { METHOD_LABELS, OrderStatus, PaymentMethod } from "@/lib/types";
+import { STATUS_FR } from "@/lib/documentLabels";
+import { toWaNumber } from "@/lib/phone";
+import { buildTrackingUrl, waHref } from "@/lib/siteUrl";
+import { receiptShareMessage, trackingShareMessage } from "@/lib/whatsappMessages";
 import { StatusBadge } from "@/components/badges";
 import OrderActions from "@/components/OrderActions";
+import OrderTrackingShare from "@/components/tracking/OrderTrackingShare";
+import WhatsAppButton from "@/components/tracking/WhatsAppButton";
 import { issueContract, issueInvoice } from "@/lib/documentActions";
 import { btnSecondary, cardCls, tdCls, thCls } from "@/components/ui";
 
@@ -22,6 +28,8 @@ interface OrderDetail {
   created_at: string;
   invoice_number: string | null;
   contract_number: string | null;
+  tracking_token: string;
+  tracking_enabled: boolean;
   client: { code: string; name: string; phone: string | null; city: string | null };
   car: {
     code: string;
@@ -51,7 +59,7 @@ export default async function OrderDetailPage({
   const { data, error } = await supabase
     .from("orders")
     .select(
-      `id, code, order_date, status, tracking_no, notes, discount_dzd, extras_dzd, created_at, invoice_number, contract_number,
+      `id, code, order_date, status, tracking_no, notes, discount_dzd, extras_dzd, created_at, invoice_number, contract_number, tracking_token, tracking_enabled,
        client:clients(code, name, phone, city),
        car:cars(code, year, list_price_dzd, brand:brands(name), model:models(name), color:colors(name)),
        payments(id, code, paid_on, amount_dzd, method, notes)`
@@ -65,9 +73,59 @@ export default async function OrderDetailPage({
   const total = order.car.list_price_dzd - order.discount_dzd + order.extras_dzd;
   const paid = order.payments.reduce((s, p) => s + p.amount_dzd, 0);
   const balance = total - paid;
-  const payments = [...order.payments].sort((a, b) =>
-    a.paid_on.localeCompare(b.paid_on)
+
+  // --- Customer tracking / WhatsApp sharing ---
+  const vehicle = `${order.car.brand.name} ${order.car.model.name} ${order.car.color.name} ${order.car.year}`;
+  const trackingUrl = order.tracking_enabled
+    ? buildTrackingUrl(order.tracking_token)
+    : null;
+  const clientWa = toWaNumber(order.client.phone);
+  const shareDisabledReason = !order.tracking_enabled
+    ? "Le lien de suivi est désactivé pour cette commande."
+    : !clientWa
+    ? "Numéro de téléphone du client manquant ou invalide."
+    : !trackingUrl
+    ? "URL du site non configurée (NEXT_PUBLIC_SITE_URL)."
+    : null;
+  const orderWaHref =
+    clientWa && trackingUrl
+      ? waHref(
+          clientWa,
+          trackingShareMessage({
+            name: order.client.name,
+            orderCode: order.code,
+            vehicle,
+            statusFr: STATUS_FR[order.status],
+            trackingUrl,
+          })
+        )
+      : null;
+
+  // Payments sorted, each with the running balance after it and a receipt
+  // WhatsApp link (which points to the tracking page, never the receipt PDF).
+  const sorted = [...order.payments].sort((a, b) =>
+    `${a.paid_on}#${a.code}`.localeCompare(`${b.paid_on}#${b.code}`)
   );
+  let running = 0;
+  const payments = sorted.map((p) => {
+    running += p.amount_dzd;
+    const balanceAfter = total - running;
+    const href =
+      clientWa && trackingUrl
+        ? waHref(
+            clientWa,
+            receiptShareMessage({
+              name: order.client.name,
+              orderCode: order.code,
+              amount: p.amount_dzd,
+              paidOn: p.paid_on,
+              balance: balanceAfter,
+              trackingUrl,
+            })
+          )
+        : null;
+    return { ...p, waHref: href };
+  });
 
   return (
     <div className="space-y-4">
@@ -159,6 +217,13 @@ export default async function OrderDetailPage({
         </div>
       </div>
 
+      <OrderTrackingShare
+        orderId={order.id}
+        trackingUrl={trackingUrl}
+        waHref={orderWaHref}
+        shareDisabledReason={shareDisabledReason}
+      />
+
       <div className={cardCls}>
         <div className="flex items-center justify-between px-5 py-3">
           <h2 className="text-sm font-semibold text-gray-700">
@@ -194,12 +259,20 @@ export default async function OrderDetailPage({
                   <td className={tdCls}>{METHOD_LABELS[p.method]}</td>
                   <td className={`${tdCls} text-gray-500`}>{p.notes || "—"}</td>
                   <td className={`${tdCls} text-right`}>
-                    <Link
-                      href={`/payments/${p.id}/receipt`}
-                      className="text-blue-700 hover:underline"
-                    >
-                      Receipt
-                    </Link>
+                    <div className="flex items-center justify-end gap-3">
+                      <WhatsAppButton
+                        href={p.waHref}
+                        label="Envoyer le reçu (WhatsApp)"
+                        disabledReason={shareDisabledReason}
+                        className="px-2 py-1 text-xs"
+                      />
+                      <Link
+                        href={`/payments/${p.id}/receipt`}
+                        className="text-blue-700 hover:underline"
+                      >
+                        Receipt
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}
