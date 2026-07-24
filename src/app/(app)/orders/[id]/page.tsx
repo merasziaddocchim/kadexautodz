@@ -219,6 +219,7 @@ export default async function OrderDetailPage({
 
       <OrderTrackingShare
         orderId={order.id}
+        trackingEnabled={order.tracking_enabled}
         trackingUrl={trackingUrl}
         waHref={orderWaHref}
         shareDisabledReason={shareDisabledReason}
