@@ -2,6 +2,12 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function proxy(request: NextRequest) {
+  // Public customer surface: order tracking. No auth, no session handling —
+  // access is controlled entirely by the unguessable token in the URL.
+  if (request.nextUrl.pathname.startsWith("/suivi")) {
+    return NextResponse.next({ request });
+  }
+
   let response = NextResponse.next({ request });
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
