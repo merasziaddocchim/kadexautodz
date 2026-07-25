@@ -23,6 +23,7 @@ interface TransitOrder {
 interface TransitInvoiceRow {
   id: string;
   number: string | null;
+  issued_on: string | null;
   place: string;
   invoice_date: string;
   designation: string;
@@ -59,7 +60,7 @@ export default async function TransitEntryPage({
     supabase
       .from("transit_invoices")
       .select(
-        `id, number, place, invoice_date, designation, poids_kg, nombre, somme_avancee_centimes,
+        `id, number, issued_on, place, invoice_date, designation, poids_kg, nombre, somme_avancee_centimes,
          lines:transit_invoice_lines(position, label, debours_centimes, transit_centimes, observations)`
       )
       .eq("order_id", id)
@@ -131,6 +132,7 @@ export default async function TransitEntryPage({
         invoice={{
           id: invoice.id,
           number: invoice.number,
+          issued_on: invoice.issued_on,
           place: invoice.place,
           invoice_date: invoice.invoice_date,
           designation: invoice.designation,

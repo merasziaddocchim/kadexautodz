@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { friendlyError } from "@/lib/errors";
 
 // Opens the Facture Transit entry form, creating the draft row on first use.
 // The insert fires the database trigger that seeds the 16 fixed lines. No
@@ -22,13 +23,13 @@ export async function openTransitInvoice(formData: FormData) {
     .select("id")
     .eq("order_id", orderId)
     .maybeSingle();
-  if (selectError) throw new Error(selectError.message);
+  if (selectError) throw new Error(friendlyError(selectError, "transit invoice"));
 
   if (!existing) {
     const { error } = await supabase
       .from("transit_invoices")
       .insert({ order_id: orderId });
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(friendlyError(error, "transit invoice"));
   }
 
   redirect(`/orders/${orderId}/transit`);
@@ -49,7 +50,7 @@ export async function issueTransitInvoice(formData: FormData) {
   const { error } = await supabase.rpc("issue_transit_number", {
     p_order_id: orderId,
   });
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(friendlyError(error, "transit invoice"));
 
   redirect(`/orders/${orderId}/facture-transit`);
 }
