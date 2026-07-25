@@ -100,3 +100,21 @@ export function montantEnLettresDZD(n: number): string {
 export function capitalizeFirst(s: string): string {
   return s.length === 0 ? s : s[0].toUpperCase() + s.slice(1);
 }
+
+// Amount held in CENTIMES, spelled out: 94460350 ->
+// "neuf cent quarante-quatre mille six cent trois dinars algériens et
+// cinquante centimes". Uses the absolute value — the sign is carried by the
+// figures next to it. Returns "" if out of supported range.
+export function montantCentimesEnLettresDZD(centimes: number): string {
+  const abs = Math.abs(Math.trunc(centimes));
+  const dinars = Math.floor(abs / 100);
+  const cents = abs % 100;
+
+  const dinarWords = montantEnLettresDZD(dinars);
+  if (dinarWords === "") return "";
+  if (cents === 0) return dinarWords;
+
+  const centWords = toFrenchWords(cents);
+  const centUnit = cents === 1 ? "centime" : "centimes";
+  return `${dinarWords} et ${centWords} ${centUnit}`;
+}
