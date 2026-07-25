@@ -10,7 +10,9 @@ inventory, orders, payments, and a live dashboard — with no double-selling.
 - Supabase (Postgres + Auth) via `@supabase/supabase-js` and `@supabase/ssr`
 - Recharts
 
-All money is DZD, stored as integer dinars (bigint) — never floats.
+All money is DZD and always integer (bigint) — never floats. Orders, payments
+and inventory are stored as **whole dinars**; transit documents, which need
+centimes, are stored as **bigint centimes** (`78 275,50` → `7827550`).
 Dates display as DD/MM/YYYY. UI is in English.
 
 ## Features
@@ -28,8 +30,8 @@ Dates display as DD/MM/YYYY. UI is in English.
   warning.
 - **No double-sell** — a car can have only one active (non-cancelled) order,
   enforced by a partial unique index in the database.
-- **Documents** — printable invoice, payment receipt, and vehicle sale
-  contract, in French (see below).
+- **Documents** — printable invoice, payment receipt, vehicle sale contract,
+  and transit invoice, in French (see below).
 - **Settings** — `/settings` edits the company identity (RC/NIF/NIS/ART,
   RIB, capital…) used on all documents, so the owner never touches the
   database.
@@ -37,7 +39,7 @@ Dates display as DD/MM/YYYY. UI is in English.
   client can follow their order, plus one-tap WhatsApp sharing for staff
   (see below).
 
-## Documents (invoice, receipt, contract)
+## Documents (invoice, receipt, contract, facture transit)
 
 Documents are printable, print-optimized A4 pages in **French** (the app UI
 stays English). Open the document and use the browser's **Print → Save as
@@ -55,10 +57,12 @@ Routes (all staff-only):
 - `/orders/[id]/contract` — **Contrat de vente de véhicule**. Numbered
   articles (objet, prix, modalités de paiement, livraison, transfert de
   propriété, garantie, litiges) with signature blocks.
+- `/orders/[id]/facture-transit` — **Facture Transit**. The customs/transit
+  cost breakdown, reproducing the owners' own template (see below).
 
 Open the invoice/contract from the order page ("Issue invoice / Print",
 "Issue contract / Print"); open a receipt from the payments table or the
-order's payment list.
+order's payment list. The transit invoice is typed up first — see below.
 
 ### Document numbering
 
@@ -74,6 +78,49 @@ from a server action. It takes a transaction-scoped advisory lock on
 moment can never collide; the `invoice_number` / `contract_number` unique
 constraints are a final backstop. The function is **idempotent** — issuing an
 already-numbered document returns the existing number and never renumbers.
+
+Transit invoices keep the owners' own paper format, `NNN/YY`, and have their
+own function (`issue_transit_number`) with the same guarantees — advisory
+lock, idempotent, assigned on issue. Their series continues from the paper
+book, so the first one issued in 2026 is **`611/26`**. The counter is **per
+year**: January 2027 restarts at `001/27`.
+
+### Facture Transit
+
+A fourth document type, separate from the sale invoice: the breakdown of
+customs and transit costs for one order. It reproduces the owners' existing
+template, so both its wording and its arithmetic follow their paper document
+rather than the app's other invoices.
+
+**Staff type the cost lines in the dashboard.** From the order page, click
+**Facture Transit** — this opens `/orders/[id]/transit`, the entry form. It
+has the **16 fixed lines** (Quittance TVN, Ouverture de dossier, Programation
+visite, …, Timbre 1%), each with a **Debours**, a **Transit** and an
+**Observations** field, plus the weight, the number of packages and the
+advance already received. Totals update as you type. **Save, issue & print**
+assigns the number and opens the printable document.
+
+The labels are fixed and cannot be edited — only the amounts. They are stored
+in the database and duplicated in `src/lib/transitLines.ts`
+(`TRANSIT_LINE_TEMPLATE`); the two lists are deliberately **verbatim copies of
+the owners' spelling** (including "Programation visite" and "Frais Depassement
+Main levee") and must be changed together.
+
+Amounts are **bigint centimes**, not whole dinars — transit costs carry
+centimes (`78 275,50`). Type them the French way, with a comma; blank means
+blank, and prints as an empty cell rather than `0,00`.
+
+The arithmetic:
+
+```
+Total Partiel = debours + transit
+TVA 9%        = 9% of the TRANSIT column only   (debours are not taxed)
+TOTAL NET     = Total Partiel + TVA − somme avancée
+```
+
+`TOTAL NET` **can be negative** when the advance exceeds the costs — that is
+normal, and the document then prints the amount in words followed by
+**"(en faveur du client)"**.
 
 ### Contract blockers
 
@@ -164,8 +211,14 @@ required at runtime.
 Schema, RLS policies, and seed data live in Supabase. Every table has Row
 Level Security enabled with a single policy allowing the `authenticated`
 role only — the `anon` role has no access. Money columns are `bigint`
-(integer dinars). A partial unique index,
-`orders(car_id) where status <> 'cancelled'`, guarantees no double-selling.
+(integer dinars, or integer centimes on the transit tables). A partial unique
+index, `orders(car_id) where status <> 'cancelled'`, guarantees no
+double-selling.
+
+The transit invoice adds two tables: `transit_invoices` (one per order, with
+the header fields and the advance received) and `transit_invoice_lines` (its
+16 lines). Creating a `transit_invoices` row fires a trigger that seeds the 16
+fixed lines, so a draft always starts complete and in the right order.
 
 ## Staff accounts (invite-only)
 
