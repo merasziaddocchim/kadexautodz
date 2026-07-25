@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { btnSecondary, cardCls } from "@/components/ui";
+import { btnSecondary, cardCls, warnCls } from "@/components/ui";
 import ConfirmButton from "@/components/ConfirmButton";
 import WhatsAppButton from "@/components/tracking/WhatsAppButton";
 import CopyLinkButton from "@/components/tracking/CopyLinkButton";
@@ -16,12 +16,14 @@ export default function OrderTrackingShare({
   trackingUrl,
   waHref,
   shareDisabledReason,
+  siteUrlWarning,
 }: {
   orderId: string;
   trackingEnabled: boolean;
   trackingUrl: string | null;
   waHref: string | null;
   shareDisabledReason: string | null;
+  siteUrlWarning?: string | null;
 }) {
   const [error, setError] = useState<string | null>(null);
 
@@ -58,6 +60,10 @@ export default function OrderTrackingShare({
           : trackingUrl ??
             "Set NEXT_PUBLIC_SITE_URL to generate the public link."}
       </p>
+
+      {siteUrlWarning && (
+        <p className={`${warnCls} mb-3`}>{siteUrlWarning}</p>
+      )}
 
       <div className="flex flex-wrap items-center gap-2">
         <WhatsAppButton

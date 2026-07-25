@@ -5,7 +5,11 @@ import { formatDate, formatDZD } from "@/lib/format";
 import { METHOD_LABELS, OrderStatus, PaymentMethod } from "@/lib/types";
 import { STATUS_FR } from "@/lib/documentLabels";
 import { toWaNumber } from "@/lib/phone";
-import { buildTrackingUrl, waHref } from "@/lib/siteUrl";
+import {
+  buildTrackingUrl,
+  getSiteUrlInfo,
+  waHref,
+} from "@/lib/siteUrl";
 import { receiptShareMessage, trackingShareMessage } from "@/lib/whatsappMessages";
 import { StatusBadge } from "@/components/badges";
 import OrderActions from "@/components/OrderActions";
@@ -80,15 +84,19 @@ export default async function OrderDetailPage({
     ? buildTrackingUrl(order.tracking_token)
     : null;
   const clientWa = toWaNumber(order.client.phone);
+  // A VERCEL_URL fallback link sits behind Vercel Deployment Protection and
+  // prompts the customer to sign in to Vercel — never send those.
+  const siteUrl = getSiteUrlInfo();
+  const customerSafeUrl = siteUrl.source === "explicit";
   const shareDisabledReason = !order.tracking_enabled
     ? "Le lien de suivi est désactivé pour cette commande."
+    : !customerSafeUrl
+    ? "NEXT_PUBLIC_SITE_URL n’est pas défini : le lien pointerait vers une URL de déploiement Vercel protégée, que le client ne peut pas ouvrir."
     : !clientWa
     ? "Numéro de téléphone du client manquant ou invalide."
-    : !trackingUrl
-    ? "URL du site non configurée (NEXT_PUBLIC_SITE_URL)."
     : null;
   const orderWaHref =
-    clientWa && trackingUrl
+    clientWa && trackingUrl && customerSafeUrl
       ? waHref(
           clientWa,
           trackingShareMessage({
@@ -111,7 +119,7 @@ export default async function OrderDetailPage({
     running += p.amount_dzd;
     const balanceAfter = total - running;
     const href =
-      clientWa && trackingUrl
+      clientWa && trackingUrl && customerSafeUrl
         ? waHref(
             clientWa,
             receiptShareMessage({
@@ -223,6 +231,11 @@ export default async function OrderDetailPage({
         trackingUrl={trackingUrl}
         waHref={orderWaHref}
         shareDisabledReason={shareDisabledReason}
+        siteUrlWarning={
+          customerSafeUrl
+            ? null
+            : "NEXT_PUBLIC_SITE_URL is not set, so links fall back to a Vercel deployment URL that is behind Deployment Protection — customers opening it are asked to sign in to Vercel. Set it in Vercel → Settings → Environment Variables, then redeploy."
+        }
       />
 
       <div className={cardCls}>

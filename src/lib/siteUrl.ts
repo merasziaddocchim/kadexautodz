@@ -1,14 +1,30 @@
 // Absolute base URL for links we send to customers (tracking pages).
-// Prefers an explicit, stable NEXT_PUBLIC_SITE_URL; falls back to Vercel's
-// per-deployment VERCEL_URL at runtime. Returns "" when neither is set (e.g.
-// local dev / a no-env build) so callers disable sharing rather than emit a
-// relative or broken link.
-export function getSiteUrl(): string {
+//
+// IMPORTANT: VERCEL_URL is the *per-deployment* hostname (e.g.
+// my-app-9f3k2m-team.vercel.app). Under Vercel's Deployment Protection those
+// generated URLs require a Vercel login, so a customer opening one is asked to
+// sign in to Vercel. It is only a last-resort fallback for staff previews —
+// customer-facing links must come from NEXT_PUBLIC_SITE_URL (the stable
+// production domain).
+export type SiteUrlSource = "explicit" | "vercel" | "none";
+
+export function getSiteUrlInfo(): { url: string; source: SiteUrlSource } {
   const explicit = process.env.NEXT_PUBLIC_SITE_URL;
-  if (explicit) return explicit.replace(/\/+$/, "");
+  if (explicit) {
+    return { url: explicit.replace(/\/+$/, ""), source: "explicit" };
+  }
   const vercel = process.env.VERCEL_URL;
-  if (vercel) return `https://${vercel}`;
-  return "";
+  if (vercel) return { url: `https://${vercel}`, source: "vercel" };
+  return { url: "", source: "none" };
+}
+
+export function getSiteUrl(): string {
+  return getSiteUrlInfo().url;
+}
+
+// True when the base URL is not safe to send to a customer.
+export function isCustomerSafeSiteUrl(): boolean {
+  return getSiteUrlInfo().source === "explicit";
 }
 
 // Absolute /suivi/<token> URL, or null if no base URL is configured.
