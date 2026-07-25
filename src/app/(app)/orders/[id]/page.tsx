@@ -16,6 +16,7 @@ import OrderActions from "@/components/OrderActions";
 import OrderTrackingShare from "@/components/tracking/OrderTrackingShare";
 import WhatsAppButton from "@/components/tracking/WhatsAppButton";
 import { issueContract, issueInvoice } from "@/lib/documentActions";
+import { openTransitInvoice } from "@/lib/transitActions";
 import { btnSecondary, cardCls, tdCls, thCls } from "@/components/ui";
 
 export const metadata = { title: "Order — Kadex Auto DZ" };
@@ -72,6 +73,15 @@ export default async function OrderDetailPage({
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) notFound();
+
+  // Separate lookup: the transit invoice is its own document, created only
+  // when staff start one.
+  const { data: transit, error: transitError } = await supabase
+    .from("transit_invoices")
+    .select("number")
+    .eq("order_id", id)
+    .maybeSingle();
+  if (transitError) throw new Error(transitError.message);
 
   const order = data as unknown as OrderDetail;
   const total = order.car.list_price_dzd - order.discount_dzd + order.extras_dzd;
@@ -155,6 +165,14 @@ export default async function OrderDetailPage({
               {order.contract_number
                 ? `Contract ${order.contract_number}`
                 : "Issue contract / Print"}
+            </button>
+          </form>
+          <form action={openTransitInvoice}>
+            <input type="hidden" name="orderId" value={order.id} />
+            <button type="submit" className={btnSecondary}>
+              {transit?.number
+                ? `Facture Transit ${transit.number}`
+                : "Facture Transit"}
             </button>
           </form>
           <Link href={`/orders/${order.id}/edit`} className={btnSecondary}>
